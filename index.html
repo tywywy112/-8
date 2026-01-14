@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Flag Match AI Game</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#eef2ff;
+    text-align:center;
+    padding:30px;
+}
+.box{
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    max-width:650px;
+    margin:auto;
+}
+.flag{
+    font-size:90px;
+    margin:15px 0;
+}
+button{
+    width:260px;
+    padding:12px;
+    margin:6px;
+    border:none;
+    border-radius:12px;
+    background:#4f46e5;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+}
+button:hover{ background:#4338ca; }
+.hidden{ display:none; }
+.top{
+    display:flex;
+    justify-content:space-between;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- หน้าแรก -->
+<div class="box" id="menu">
+    <h1>🌍 Flag Match AI Game</h1>
+    <p>เลือกมินิเกม</p>
+    <button onclick="startGame('continent')">🟦 ทายชื่อทวีป</button><br>
+    <button onclick="startGame('country')">🟨 ทายชื่อประเทศ</button>
+</div>
+
+<!-- หน้าเกม -->
+<div class="box hidden" id="game">
+    <div class="top">
+        <div>✅ ถูก: <span id="correct">0</span></div>
+        <div>❌ ผิด: <span id="wrong">0</span></div>
+        <div>⏱ <span id="time">10</span>s</div>
+    </div>
+
+    <button onclick="pauseToMenu()">⏸ กลับหน้าแรก</button>
+
+    <h3 id="title"></h3>
+    <div class="flag" id="flag">🏳️</div>
+    <div id="choices"></div>
+</div>
+
+<!-- หน้าสรุป -->
+<div class="box hidden" id="summary">
+    <h2>🎉 จบเกม</h2>
+    <p>คะแนนที่ได้: <span id="sumCorrect"></span> / 100</p>
+    <p>ตอบผิด: <span id="sumWrong"></span> ข้อ</p>
+    <button onclick="reviewWrong()">🔁 เล่นข้อที่ผิด</button><br>
+    <button onclick="resetGame()">🔄 เล่นใหม่</button>
+</div>
+
+<script>
+// =======================
+// ข้อมูลประเทศ (4 ทวีป)
+// =======================
+const continents = ["Asia","Europe","Africa","Australia"];
+
+const countries = [
+    {name:"Thailand",flag:"🇹🇭",continent:"Asia"},
+    {name:"Japan",flag:"🇯🇵",continent:"Asia"},
+    {name:"China",flag:"🇨🇳",continent:"Asia"},
+    {name:"India",flag:"🇮🇳",continent:"Asia"},
+    {name:"Indonesia",flag:"🇮🇩",continent:"Asia"},
+
+    {name:"France",flag:"🇫🇷",continent:"Europe"},
+    {name:"Germany",flag:"🇩🇪",continent:"Europe"},
+    {name:"Italy",flag:"🇮🇹",continent:"Europe"},
+    {name:"Spain",flag:"🇪🇸",continent:"Europe"},
+    {name:"UK",flag:"🇬🇧",continent:"Europe"},
+
+    {name:"Egypt",flag:"🇪🇬",continent:"Africa"},
+    {name:"Nigeria",flag:"🇳🇬",continent:"Africa"},
+    {name:"Kenya",flag:"🇰🇪",continent:"Africa"},
+    {name:"South Africa",flag:"🇿🇦",continent:"Africa"},
+    {name:"Morocco",flag:"🇲🇦",continent:"Africa"},
+
+    {name:"Australia",flag:"🇦🇺",continent:"Australia"},
+    {name:"New Zealand",flag:"🇳🇿",continent:"Australia"}
+];
+
+// =======================
+// ตัวแปรเกม
+// =======================
+let mode="";
+let questions=[];
+let current;
+let index=0;
+let correct=0;
+let wrong=0;
+let wrongList=[];
+let time=10;
+let timer;
+let paused=false;
+
+// =======================
+function shuffle(arr){
+    return [...arr].sort(()=>Math.random()-0.5);
+}
+
+// =======================
+function startGame(selected){
+    mode = selected;
+
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+
+    document.getElementById("title").innerText =
+        mode==="continent" ? "ทายชื่อทวีป" : "ทายชื่อประเทศ";
+
+    if(paused){
+        paused=false;
+        nextQuestion();
+    }else{
+        index=0;
+        correct=0;
+        wrong=0;
+        wrongList=[];
+        questions = shuffle(countries).slice(0,100);
+        nextQuestion();
+    }
+}
+
+// =======================
+function nextQuestion(){
+    clearInterval(timer);
+    time=10;
+    document.getElementById("time").innerText=time;
+
+    if(index>=questions.length){
+        endGame();
+        return;
+    }
+
+    current = questions[index];
+    document.getElementById("flag").innerText=current.flag;
+    document.getElementById("correct").innerText=correct;
+    document.getElementById("wrong").innerText=wrong;
+
+    createChoices();
+    timer=setInterval(countdown,1000);
+}
+
+// =======================
+function createChoices(){
+    const box=document.getElementById("choices");
+    box.innerHTML="";
+
+    let options=[];
+    if(mode==="continent"){
+        options=[...continents];
+    }else{
+        options = shuffle(
+            countries.filter(c=>c.continent===current.continent)
+        ).slice(0,3).map(c=>c.name);
+        if(!options.includes(current.name)) options[0]=current.name;
+    }
+
+    shuffle(options).forEach(opt=>{
+        const btn=document.createElement("button");
+        btn.innerText=opt;
+        btn.onclick=()=>answer(opt);
+        box.appendChild(btn);
+    });
+}
+
+// =======================
+function answer(ans){
+    clearInterval(timer);
+
+    let ok = (ans===current.name || ans===current.continent);
+    if(ok){
+        correct++;
+    }else{
+        wrong++;
+        wrongList.push(current);
+        alert("คำตอบที่ถูกต้องคือ: " +
+            (mode==="continent"?current.continent:current.name));
+    }
+    index++;
+    nextQuestion();
+}
+
+// =======================
+function countdown(){
+    time--;
+    document.getElementById("time").innerText=time;
+    if(time<=0){
+        wrong++;
+        wrongList.push(current);
+        index++;
+        nextQuestion();
+    }
+}
+
+// =======================
+function pauseToMenu(){
+    clearInterval(timer);
+    paused=true;
+    document.getElementById("game").classList.add("hidden");
+    document.getElementById("menu").classList.remove("hidden");
+}
+
+// =======================
+function endGame(){
+    document.getElementById("game").classList.add("hidden");
+    document.getElementById("summary").classList.remove("hidden");
+    document.getElementById("sumCorrect").innerText=correct;
+    document.getElementById("sumWrong").innerText=wrong;
+}
+
+// =======================
+function reviewWrong(){
+    questions=[...wrongList];
+    index=0;
+    wrongList=[];
+    document.getElementById("summary").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    nextQuestion();
+}
+
+// =======================
+function resetGame(){
+    paused=false;
+    document.getElementById("summary").classList.add("hidden");
+    document.getElementById("menu").classList.remove("hidden");
+}
+</script>
+
+</body>
+</html>
