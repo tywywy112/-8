@@ -7,34 +7,49 @@
 <style>
 body{
     font-family: Arial;
-    background:#eef2ff;
-    text-align:center;
-    padding:30px;
+    margin:0;
+    padding:0;
+    min-height:100vh;
+    background:
+      linear-gradient(rgba(0,0,0,0.4),rgba(0,0,0,0.4)),
+      url("https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg");
+    background-size:cover;
+    background-position:center;
+    display:flex;
+    justify-content:center;
+    align-items:center;
 }
+
 .box{
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    max-width:650px;
-    margin:auto;
+    background:rgba(255,255,255,0.92);
+    padding:25px;
+    border-radius:18px;
+    max-width:680px;
+    width:90%;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
+
 .flag{
     font-size:90px;
-    margin:15px 0;
+    margin:20px 0;
 }
+
 button{
     width:260px;
     padding:12px;
     margin:6px;
     border:none;
     border-radius:12px;
-    background:#4f46e5;
+    background:#2563eb;
     color:white;
     font-size:16px;
     cursor:pointer;
 }
-button:hover{ background:#4338ca; }
+button:hover{ background:#1e40af; }
+
 .hidden{ display:none; }
+
 .top{
     display:flex;
     justify-content:space-between;
@@ -49,7 +64,7 @@ button:hover{ background:#4338ca; }
 <!-- หน้าแรก -->
 <div class="box" id="menu">
     <h1>🌍 Flag Match AI Game</h1>
-    <p>เลือกมินิเกม</p>
+    <p>เกมทายธงประเทศด้วย AI</p>
     <button onclick="startGame('continent')">🟦 ทายชื่อทวีป</button><br>
     <button onclick="startGame('country')">🟨 ทายชื่อประเทศ</button>
 </div>
@@ -62,11 +77,13 @@ button:hover{ background:#4338ca; }
         <div>⏱ <span id="time">10</span>s</div>
     </div>
 
-    <button onclick="pauseToMenu()">⏸ กลับหน้าแรก</button>
-
     <h3 id="title"></h3>
     <div class="flag" id="flag">🏳️</div>
     <div id="choices"></div>
+
+    <!-- ปุ่มย้อนกลับอยู่ด้านล่าง -->
+    <hr>
+    <button onclick="pauseToMenu()">⏸ กลับหน้าแรก</button>
 </div>
 
 <!-- หน้าสรุป -->
@@ -79,179 +96,138 @@ button:hover{ background:#4338ca; }
 </div>
 
 <script>
-// =======================
-// ข้อมูลประเทศ (4 ทวีป)
-// =======================
-const continents = ["Asia","Europe","Africa","Australia"];
+const continents=["Asia","Europe","Africa","Australia"];
 
-const countries = [
-    {name:"Thailand",flag:"🇹🇭",continent:"Asia"},
-    {name:"Japan",flag:"🇯🇵",continent:"Asia"},
-    {name:"China",flag:"🇨🇳",continent:"Asia"},
-    {name:"India",flag:"🇮🇳",continent:"Asia"},
-    {name:"Indonesia",flag:"🇮🇩",continent:"Asia"},
+const countries=[
+ {name:"Thailand",flag:"🇹🇭",continent:"Asia"},
+ {name:"Japan",flag:"🇯🇵",continent:"Asia"},
+ {name:"China",flag:"🇨🇳",continent:"Asia"},
+ {name:"India",flag:"🇮🇳",continent:"Asia"},
+ {name:"Indonesia",flag:"🇮🇩",continent:"Asia"},
 
-    {name:"France",flag:"🇫🇷",continent:"Europe"},
-    {name:"Germany",flag:"🇩🇪",continent:"Europe"},
-    {name:"Italy",flag:"🇮🇹",continent:"Europe"},
-    {name:"Spain",flag:"🇪🇸",continent:"Europe"},
-    {name:"UK",flag:"🇬🇧",continent:"Europe"},
+ {name:"France",flag:"🇫🇷",continent:"Europe"},
+ {name:"Germany",flag:"🇩🇪",continent:"Europe"},
+ {name:"Italy",flag:"🇮🇹",continent:"Europe"},
+ {name:"Spain",flag:"🇪🇸",continent:"Europe"},
+ {name:"UK",flag:"🇬🇧",continent:"Europe"},
 
-    {name:"Egypt",flag:"🇪🇬",continent:"Africa"},
-    {name:"Nigeria",flag:"🇳🇬",continent:"Africa"},
-    {name:"Kenya",flag:"🇰🇪",continent:"Africa"},
-    {name:"South Africa",flag:"🇿🇦",continent:"Africa"},
-    {name:"Morocco",flag:"🇲🇦",continent:"Africa"},
+ {name:"Egypt",flag:"🇪🇬",continent:"Africa"},
+ {name:"Nigeria",flag:"🇳🇬",continent:"Africa"},
+ {name:"Kenya",flag:"🇰🇪",continent:"Africa"},
+ {name:"South Africa",flag:"🇿🇦",continent:"Africa"},
+ {name:"Morocco",flag:"🇲🇦",continent:"Africa"},
 
-    {name:"Australia",flag:"🇦🇺",continent:"Australia"},
-    {name:"New Zealand",flag:"🇳🇿",continent:"Australia"}
+ {name:"Australia",flag:"🇦🇺",continent:"Australia"},
+ {name:"New Zealand",flag:"🇳🇿",continent:"Australia"}
 ];
 
-// =======================
-// ตัวแปรเกม
-// =======================
-let mode="";
-let questions=[];
-let current;
-let index=0;
-let correct=0;
-let wrong=0;
-let wrongList=[];
-let time=10;
-let timer;
-let paused=false;
+let mode="",questions=[],current;
+let index=0,correct=0,wrong=0,time=10;
+let wrongList=[],timer,paused=false;
 
-// =======================
-function shuffle(arr){
-    return [...arr].sort(()=>Math.random()-0.5);
+function shuffle(a){ return [...a].sort(()=>Math.random()-0.5); }
+
+function startGame(m){
+ mode=m;
+ document.getElementById("menu").classList.add("hidden");
+ document.getElementById("game").classList.remove("hidden");
+ document.getElementById("title").innerText=
+   mode==="continent"?"ทายชื่อทวีป":"ทายชื่อประเทศ";
+
+ if(paused){
+   paused=false;
+   nextQuestion();
+ }else{
+   index=0;correct=0;wrong=0;wrongList=[];
+   questions=shuffle(countries).slice(0,100);
+   nextQuestion();
+ }
 }
 
-// =======================
-function startGame(selected){
-    mode = selected;
-
-    document.getElementById("menu").classList.add("hidden");
-    document.getElementById("game").classList.remove("hidden");
-
-    document.getElementById("title").innerText =
-        mode==="continent" ? "ทายชื่อทวีป" : "ทายชื่อประเทศ";
-
-    if(paused){
-        paused=false;
-        nextQuestion();
-    }else{
-        index=0;
-        correct=0;
-        wrong=0;
-        wrongList=[];
-        questions = shuffle(countries).slice(0,100);
-        nextQuestion();
-    }
-}
-
-// =======================
 function nextQuestion(){
-    clearInterval(timer);
-    time=10;
-    document.getElementById("time").innerText=time;
+ clearInterval(timer);
+ time=10;
+ document.getElementById("time").innerText=time;
 
-    if(index>=questions.length){
-        endGame();
-        return;
-    }
+ if(index>=questions.length){ endGame(); return; }
 
-    current = questions[index];
-    document.getElementById("flag").innerText=current.flag;
-    document.getElementById("correct").innerText=correct;
-    document.getElementById("wrong").innerText=wrong;
+ current=questions[index];
+ document.getElementById("flag").innerText=current.flag;
+ document.getElementById("correct").innerText=correct;
+ document.getElementById("wrong").innerText=wrong;
 
-    createChoices();
-    timer=setInterval(countdown,1000);
+ createChoices();
+ timer=setInterval(countdown,1000);
 }
 
-// =======================
 function createChoices(){
-    const box=document.getElementById("choices");
-    box.innerHTML="";
+ const box=document.getElementById("choices");
+ box.innerHTML="";
+ let opts=[];
 
-    let options=[];
-    if(mode==="continent"){
-        options=[...continents];
-    }else{
-        options = shuffle(
-            countries.filter(c=>c.continent===current.continent)
-        ).slice(0,3).map(c=>c.name);
-        if(!options.includes(current.name)) options[0]=current.name;
-    }
+ if(mode==="continent"){
+   opts=[...continents];
+ }else{
+   opts=shuffle(
+     countries.filter(c=>c.continent===current.continent)
+   ).slice(0,3).map(c=>c.name);
+   if(!opts.includes(current.name)) opts[0]=current.name;
+ }
 
-    shuffle(options).forEach(opt=>{
-        const btn=document.createElement("button");
-        btn.innerText=opt;
-        btn.onclick=()=>answer(opt);
-        box.appendChild(btn);
-    });
+ shuffle(opts).forEach(o=>{
+   const b=document.createElement("button");
+   b.innerText=o;
+   b.onclick=()=>answer(o);
+   box.appendChild(b);
+ });
 }
 
-// =======================
-function answer(ans){
-    clearInterval(timer);
-
-    let ok = (ans===current.name || ans===current.continent);
-    if(ok){
-        correct++;
-    }else{
-        wrong++;
-        wrongList.push(current);
-        alert("คำตอบที่ถูกต้องคือ: " +
-            (mode==="continent"?current.continent:current.name));
-    }
-    index++;
-    nextQuestion();
+function answer(a){
+ clearInterval(timer);
+ if(a===current.name||a===current.continent) correct++;
+ else{
+   wrong++; wrongList.push(current);
+   alert("คำตอบที่ถูกต้องคือ "+
+     (mode==="continent"?current.continent:current.name));
+ }
+ index++; nextQuestion();
 }
 
-// =======================
 function countdown(){
-    time--;
-    document.getElementById("time").innerText=time;
-    if(time<=0){
-        wrong++;
-        wrongList.push(current);
-        index++;
-        nextQuestion();
-    }
+ time--;
+ document.getElementById("time").innerText=time;
+ if(time<=0){
+   wrong++; wrongList.push(current);
+   index++; nextQuestion();
+ }
 }
 
-// =======================
 function pauseToMenu(){
-    clearInterval(timer);
-    paused=true;
-    document.getElementById("game").classList.add("hidden");
-    document.getElementById("menu").classList.remove("hidden");
+ clearInterval(timer);
+ paused=true;
+ document.getElementById("game").classList.add("hidden");
+ document.getElementById("menu").classList.remove("hidden");
 }
 
-// =======================
 function endGame(){
-    document.getElementById("game").classList.add("hidden");
-    document.getElementById("summary").classList.remove("hidden");
-    document.getElementById("sumCorrect").innerText=correct;
-    document.getElementById("sumWrong").innerText=wrong;
+ document.getElementById("game").classList.add("hidden");
+ document.getElementById("summary").classList.remove("hidden");
+ document.getElementById("sumCorrect").innerText=correct;
+ document.getElementById("sumWrong").innerText=wrong;
 }
 
-// =======================
 function reviewWrong(){
-    questions=[...wrongList];
-    index=0;
-    wrongList=[];
-    document.getElementById("summary").classList.add("hidden");
-    document.getElementById("game").classList.remove("hidden");
-    nextQuestion();
+ questions=[...wrongList];
+ index=0; wrongList=[];
+ document.getElementById("summary").classList.add("hidden");
+ document.getElementById("game").classList.remove("hidden");
+ nextQuestion();
 }
 
-// =======================
 function resetGame(){
-    paused=false;
-    document.getElementById("summary").classList.add("hidden");
-    document.getElementById("menu").classList.remove("hidden");
+ paused=false;
+ document.getElementById("summary").classList.add("hidden");
+ document.getElementById("menu").classList.remove("hidden");
 }
 </script>
 
